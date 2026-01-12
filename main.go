@@ -17,25 +17,44 @@ var permsMode os.FileMode
 
 var dperms string
 var dpermsMode os.FileMode
+var directory string
 
 func init() {
 	flag.StringVar(&prefix, "prefix", "FLATENV_", "Environment variable prefix to scan for")
 	flag.BoolVar(&dryrun, "dryrun", false, "Log files that would be written instead of writing them")
 	flag.StringVar(&perms, "perms", "0660", "Default filesystem permissions for files")
 	flag.StringVar(&dperms, "dperms", "0770", "Default filesystem permissions for directories")
+	flag.StringVar(&directory, "directory", "", "Directory to set as context for operations")
 }
 
 func main() {
 	flag.Parse()
+	var err error
+	if directory == "" {
+		directory, err = os.Getwd()
+		if err != nil {
+			slog.With("error", err).Error("failed to get working directory")
+		}
+	}
+
 	fmt.Sscanf(perms, "%o", &permsMode)
 	fmt.Sscanf(dperms, "%o", &dpermsMode)
-	slog.With("dperms", dpermsMode).Info("Scanned octal")
+	slog.With("dperms", dpermsMode).Debug("Scanned octal")
 	if !strings.HasSuffix(prefix, "_") {
 		slog.With("prefix", prefix).Warn("Prefix does not end with underscore, which is unexpected")
 	}
+	root, err := os.OpenRoot(directory)
+	if err != nil {
+		slog.With("error", err).Error("failed to open root")
+	} else {
+		mainInRoot(root)
+	}
+}
+
+func mainInRoot(root *os.Root) {
 	files := readEnv()
-	slog.With("files", files).Info("found files")
-	err := render(files)
+	slog.With("files", files).Debug("found files")
+	err := render(root, files)
 	if err != nil {
 		slog.With("error", err, "files", files).Error("Cannot render file")
 		os.Exit(1)
@@ -53,18 +72,18 @@ func readEnv() map[string]string {
 	return files
 }
 
-func render(files map[string]string) error {
+func render(root *os.Root, files map[string]string) error {
 	decodedFiles, err := translateFileNamesAndValues(files)
 	if err != nil {
 		return err
 	}
 	for fileName, contents := range decodedFiles {
 		if !dryrun {
-			err := os.MkdirAll(filepath.Dir(fileName), dpermsMode)
+			err := root.MkdirAll(filepath.Dir(fileName), dpermsMode)
 			if err != nil {
 				return err
 			}
-			err = os.WriteFile(fileName, contents, permsMode)
+			err = root.WriteFile(fileName, contents, permsMode)
 			if err != nil {
 				return err
 			}

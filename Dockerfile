@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/go/pkg/mod     go mod download
 COPY . .
 
 # Build static binary with build metadata
-RUN --mount=type=cache,target=/go/pkg/mod     CGO_ENABLED=0 GOOS=linux GOARCH=amd64     go build -trimpath -ldflags "-s -w       -X 'main.version=${VERSION}'       -X 'main.commitSHA=${GIT_SHA}'       -X 'main.buildDate=${BUILD_DATE}'"     -o /out/app .
+RUN --mount=type=cache,target=/go/pkg/mod   go test -v ./... &&  CGO_ENABLED=0 GOOS=linux GOARCH=amd64     go build -trimpath -ldflags "-s -w       -X 'main.version=${VERSION}'       -X 'main.commitSHA=${GIT_SHA}'       -X 'main.buildDate=${BUILD_DATE}'"     -o /out/app .
 
 
 ########################################

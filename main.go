@@ -47,12 +47,12 @@ func main() {
 	if err != nil {
 		slog.With("error", err).Error("failed to open root")
 	} else {
-		mainInRoot(root)
+		mainInRoot(root, os.Environ)
 	}
 }
 
-func mainInRoot(root *os.Root) {
-	files := readEnv()
+func mainInRoot(root *os.Root, environ func() map[string]string) {
+	files := readEnv(environ)
 	slog.With("files", files).Debug("found files")
 	err := render(root, files)
 	if err != nil {
@@ -61,9 +61,9 @@ func mainInRoot(root *os.Root) {
 	}
 }
 
-func readEnv() map[string]string {
+func readEnv(environ func() map[string]string) map[string]string {
 	files := make(map[string]string)
-	for _, environ := range os.Environ() {
+	for _, environ := range environ() {
 		if strings.HasPrefix(environ, prefix) {
 			environKV := strings.SplitN(environ, "=", 2)
 			files[strings.TrimPrefix(environKV[0], prefix)] = environKV[1]

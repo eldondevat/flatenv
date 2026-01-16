@@ -19,8 +19,10 @@ var dperms string
 var dpermsMode os.FileMode
 var directory string
 
+var defaultPrefix = "FLATENV_"
+
 func init() {
-	flag.StringVar(&prefix, "prefix", "FLATENV_", "Environment variable prefix to scan for")
+	flag.StringVar(&prefix, "prefix", defaultPrefix, "Environment variable prefix to scan for")
 	flag.BoolVar(&dryrun, "dryrun", false, "Log files that would be written instead of writing them")
 	flag.StringVar(&perms, "perms", "0660", "Default filesystem permissions for files")
 	flag.StringVar(&dperms, "dperms", "0770", "Default filesystem permissions for directories")
@@ -51,7 +53,7 @@ func main() {
 	}
 }
 
-func mainInRoot(root *os.Root, environ func() map[string]string) {
+func mainInRoot(root *os.Root, environ func() []string) {
 	files := readEnv(environ)
 	slog.With("files", files).Debug("found files")
 	err := render(root, files)
@@ -61,7 +63,7 @@ func mainInRoot(root *os.Root, environ func() map[string]string) {
 	}
 }
 
-func readEnv(environ func() map[string]string) map[string]string {
+func readEnv(environ func() []string) map[string]string {
 	files := make(map[string]string)
 	for _, environ := range environ() {
 		if strings.HasPrefix(environ, prefix) {
